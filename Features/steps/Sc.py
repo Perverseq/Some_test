@@ -2,12 +2,17 @@ from behave import *
 import time
 from datetime import datetime
 from selenium.common.exceptions import NoSuchElementException
-from PIL import ImageGrab
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+import zipfile
 
 
 @when("Получить имя канала из файла channel.txt")
 def step_impl(context):
-    with open(".//channel.txt", "r") as channel_name_f:
+    with open(os.path.abspath("channel.txt"), "r") as channel_name_f:
         context.channel_name = channel_name_f.readline()
 
 
@@ -15,30 +20,25 @@ def step_impl(context):
 def step_impl(context):
     context.driver.get("http:\\youtube.com\\" + context.channel_name)
     if context.driver.title == "404 Not Found":
-        screen = ImageGrab.grab()
-        screen.save(".\\Screens\\invalid_channel.jpg")
-        skip_sc(context)
+        context.driver.save_screenshot(os.path.abspath("Screens\\invalid_channel.jpg"))
+        print("Такого канала не существует")
+        context.scenario.skip(require_not_executed=True)
+    elif context.driver.title == "YouTube":
+        context.driver.save_screenshot(os.path.abspath("Screens\\empty_channel.jpg"))
+        print("Вы не ввели имя канала")
+        context.scenario.skip(require_not_executed=True)
     else:
-        pass
+        print("Канал существует, все в порядке\n")
 
 
-@step("Развернуть браузер на весь экран")
-def step_impl(context):
-    context.driver.maximize_window()
-
-
-
-
-
-@then('Спарсить количество подписчиков в файл')
+@then('Спарсить количество подписчиков в файл, сделать скриншот')
 def step_impl(context):
     element = context.driver.find_element_by_xpath('//*[@id="subscriber-count"]')
     name_channel = str(context.driver.find_element_by_id("channel-title").text)
     subs_yet = str(element.text)
     with open(".//Subs.txt", "a") as subs_count:
         subs_count.write("На канале {0} {1} {2}.\n".format(name_channel, subs_yet, datetime.now()))
-    screen = ImageGrab.grab()
-    screen.save(".\\Screens\\{}.jpg".format(subs_yet))
+        context.driver.save_screenshot(os.path.abspath("Screens\\{}.jpg".format(subs_yet)))
 
 
 @step("Обновить страницу")
@@ -56,9 +56,4 @@ def step_impl(context):
     try:
         context.driver.find_element_by_xpath('//*[@aria-label="Пауза"]').click()
     except NoSuchElementException:
-        pass
-
-
-def skip_sc(context):
-    context.scenario.skip(require_not_executed=True)
-
+        print("На главной странице нет автоматически запускающегося видео\n")
