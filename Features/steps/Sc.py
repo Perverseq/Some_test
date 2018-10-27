@@ -61,7 +61,6 @@ def step_impl(context):
         print("На главной странице нет автоматически запускающегося видео\n")
 
 
-
 def send_msg(context, path):
     login = context.logpass[0]
     password = context.logpass[1]
