@@ -7,7 +7,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
-import zipfile
 
 
 @when("Получить имя канала из файла channel.txt")
@@ -22,10 +21,12 @@ def step_impl(context):
     if context.driver.title == "404 Not Found":
         context.driver.save_screenshot(os.path.abspath("Screens\\invalid_channel.jpg"))
         print("Такого канала не существует")
+        send_msg(context, os.path.abspath('Screens\\invalid_channel.jpg'))
         context.scenario.skip(require_not_executed=True)
     elif context.driver.title == "YouTube":
         context.driver.save_screenshot(os.path.abspath("Screens\\empty_channel.jpg"))
         print("Вы не ввели имя канала")
+        send_msg(context, os.path.abspath('Screens\\empty_channel.jpg'))
         context.scenario.skip(require_not_executed=True)
     else:
         print("Канал существует, все в порядке\n")
@@ -39,6 +40,7 @@ def step_impl(context):
     with open(".//Subs.txt", "a") as subs_count:
         subs_count.write("На канале {0} {1} {2}.\n".format(name_channel, subs_yet, datetime.now()))
         context.driver.save_screenshot(os.path.abspath("Screens\\{}.jpg".format(subs_yet)))
+    send_msg(context, os.path.abspath("Screens\\{}.jpg".format(subs_yet)))
 
 
 @step("Обновить страницу")
@@ -57,3 +59,22 @@ def step_impl(context):
         context.driver.find_element_by_xpath('//*[@aria-label="Пауза"]').click()
     except NoSuchElementException:
         print("На главной странице нет автоматически запускающегося видео\n")
+
+
+
+def send_msg(context, path):
+    login = context.logpass[0]
+    password = context.logpass[1]
+    subj = context.subj
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(login , password)
+    msg = MIMEMultipart()
+    image = MIMEApplication(open(path, 'rb').read())
+    image.add_header('Content-Disposition', 'attachment', filename=path)
+    msg.attach(image)
+    text = MIMEText('Результаты текста')
+    msg.attach(text)
+    server.sendmail(login, subj, msg.as_string())
+    server.quit()
+    os.remove(path)
