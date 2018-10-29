@@ -9,30 +9,18 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 
 
-@when("Получить имя канала из файла channel.txt")
+@when("Получили имя канала из файла channel.txt")
 def step_impl(context):
     with open(os.path.abspath("channel.txt"), "r") as channel_name_f:
         context.channel_name = channel_name_f.readline()
 
 
-@step("Зайти на этот канал на ютубе, если канала нет, сделать скриншот")
+@step("Зашли на этот канал на ютубе")
 def step_impl(context):
     context.driver.get("http:\\youtube.com\\" + context.channel_name)
-    if context.driver.title == "404 Not Found":
-        context.driver.save_screenshot(os.path.abspath("Screens\\invalid_channel.jpg"))
-        print("Такого канала не существует")
-        send_msg(context, os.path.abspath('Screens\\invalid_channel.jpg'))
-        context.scenario.skip(require_not_executed=True)
-    elif context.driver.title == "YouTube":
-        context.driver.save_screenshot(os.path.abspath("Screens\\empty_channel.jpg"))
-        print("Вы не ввели имя канала")
-        send_msg(context, os.path.abspath('Screens\\empty_channel.jpg'))
-        context.scenario.skip(require_not_executed=True)
-    else:
-        print("Канал существует, все в порядке\n")
 
 
-@then('Спарсить количество подписчиков в файл, сделать скриншот')
+@then('Спарсили количество подписчиков в файл, сделали скриншот')
 def step_impl(context):
     element = context.driver.find_element_by_xpath('//*[@id="subscriber-count"]')
     name_channel = str(context.driver.find_element_by_id("channel-title").text)
@@ -43,17 +31,17 @@ def step_impl(context):
     send_msg(context, os.path.abspath("Screens\\{}.jpg".format(subs_yet)))
 
 
-@step("Обновить страницу")
+@step("Обновили страницу")
 def step_impl(context):
     context.driver.refresh()
 
 
-@then('Подождать "{minutes}" минут(-ы)')
+@then('Подождали "{minutes}" минут(-ы)')
 def step_impl(context, minutes):
     time.sleep(float(minutes) * 60)
 
 
-@then("Поставить видео на паузу")
+@then("Поставили видео на паузу")
 def step_impl(context):
     try:
         context.driver.find_element_by_xpath('//*[@aria-label="Пауза"]').click()
@@ -77,3 +65,25 @@ def send_msg(context, path):
     server.sendmail(login, subj, msg.as_string())
     server.quit()
     os.remove(path)
+
+
+@step("Проверили пустой был файл channel.txt или нет")
+def step_impl(context):
+    if context.driver.title == "YouTube":
+        context.driver.save_screenshot(os.path.abspath("Screens\\empty_channel.jpg"))
+        print("Вы не ввели имя канала\n")
+        send_msg(context, os.path.abspath('Screens\\empty_channel.jpg'))
+        context.scenario.skip(require_not_executed=True)
+    else:
+        print("Файл не пустой\n")
+
+
+@step("Проверили существует такой канал или нет")
+def step_impl(context):
+    if context.driver.title == "404 Not Found":
+        context.driver.save_screenshot(os.path.abspath("Screens\\invalid_channel.jpg"))
+        print("Такого канала не существует\n")
+        send_msg(context, os.path.abspath('Screens\\invalid_channel.jpg'))
+        context.scenario.skip(require_not_executed=True)
+    else:
+        print("Канал существует\n")
