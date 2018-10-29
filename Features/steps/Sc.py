@@ -15,6 +15,30 @@ def step_impl(context):
         context.channel_name = channel_name_f.readline()
 
 
+@step("Проверили пустой был файл channel.txt или нет")
+def step_impl(context):
+    context.driver.get("http:\\youtube.com\\" + context.channel_name)
+    if context.driver.title == "YouTube":
+        context.driver.save_screenshot(os.path.abspath("Screens\\empty_channel.jpg"))
+        print("Вы не ввели имя канала\n")
+        send_msg(context, os.path.abspath('Screens\\empty_channel.jpg'), 'Вы не ввели имя канала в channel.txt')
+        context.scenario.skip(require_not_executed=True)
+    else:
+        print("Файл не пустой\n")
+
+
+@step("Проверили существует такой канал или нет")
+def step_impl(context):
+    context.driver.get("http:\\youtube.com\\" + context.channel_name)
+    if context.driver.title == "404 Not Found":
+        context.driver.save_screenshot(os.path.abspath("Screens\\invalid_channel.jpg"))
+        print("Такого канала не существует\n")
+        send_msg(context, os.path.abspath('Screens\\invalid_channel.jpg'), 'Такого канала не существует.')
+        context.scenario.skip(require_not_executed=True)
+    else:
+        print("Канал существует\n")
+
+
 @step("Зашли на этот канал на ютубе")
 def step_impl(context):
     context.driver.get("http:\\youtube.com\\" + context.channel_name)
@@ -28,7 +52,7 @@ def step_impl(context):
     with open(".//Subs.txt", "a") as subs_count:
         subs_count.write("На канале {0} {1} {2}.\n".format(name_channel, subs_yet, datetime.now()))
         context.driver.save_screenshot(os.path.abspath("Screens\\{}.jpg".format(subs_yet)))
-    send_msg(context, os.path.abspath("Screens\\{}.jpg".format(subs_yet)))
+    send_msg(context, os.path.abspath("Screens\\{}.jpg".format(subs_yet)), 'Все шаги прошли успешно.')
 
 
 @step("Обновили страницу")
@@ -49,7 +73,7 @@ def step_impl(context):
         print("На главной странице нет автоматически запускающегося видео\n")
 
 
-def send_msg(context, path):
+def send_msg(context, path, txt):
     login = context.logpass[0]
     password = context.logpass[1]
     subj = context.subj
@@ -60,30 +84,8 @@ def send_msg(context, path):
     image = MIMEApplication(open(path, 'rb').read())
     image.add_header('Content-Disposition', 'attachment', filename=path)
     msg.attach(image)
-    text = MIMEText('Результаты текста')
+    text = MIMEText(txt)
     msg.attach(text)
     server.sendmail(login, subj, msg.as_string())
     server.quit()
     os.remove(path)
-
-
-@step("Проверили пустой был файл channel.txt или нет")
-def step_impl(context):
-    if context.driver.title == "YouTube":
-        context.driver.save_screenshot(os.path.abspath("Screens\\empty_channel.jpg"))
-        print("Вы не ввели имя канала\n")
-        send_msg(context, os.path.abspath('Screens\\empty_channel.jpg'))
-        context.scenario.skip(require_not_executed=True)
-    else:
-        print("Файл не пустой\n")
-
-
-@step("Проверили существует такой канал или нет")
-def step_impl(context):
-    if context.driver.title == "404 Not Found":
-        context.driver.save_screenshot(os.path.abspath("Screens\\invalid_channel.jpg"))
-        print("Такого канала не существует\n")
-        send_msg(context, os.path.abspath('Screens\\invalid_channel.jpg'))
-        context.scenario.skip(require_not_executed=True)
-    else:
-        print("Канал существует\n")
